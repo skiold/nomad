@@ -60,6 +60,15 @@ RUN set -x && \
     apk del .entrykit-deps && \
     entrykit --symlink
 
+# Install entrykit
+RUN set -x && \
+    apk --update add --no-cache --virtual .entrykit-deps curl ca-certificates tar && \
+    curl -L https://github.com/progrium/entrykit/releases/download/v0.4.0/entrykit_0.4.0_Linux_x86_64.tgz | tar zx && \
+    chmod +x entrykit && \
+    mv entrykit /bin/entrykit && \
+    apk del .entrykit-deps && \
+    entrykit --symlink
+
 ADD start.sh /usr/local/bin/nomad-start.sh
 
 ENTRYPOINT ["codep", \
