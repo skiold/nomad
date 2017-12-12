@@ -1,4 +1,4 @@
-FROM alpine:3.6
+FROM docker:17.09-dind
 
 LABEL maintainer="DJ Enriquez <denrie.enriquezjr@gmail.com> (@djenriquez)"
 
@@ -15,7 +15,8 @@ RUN set -x && \
     apk add --allow-untrusted /tmp/glibc-${GLIBC_VERSION}.apk && \
     rm -rf /tmp/glibc-${GLIBC_VERSION}.apk /var/cache/apk/* && \
     curl -L -o /usr/local/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_amd64 && \
-    chmod +x /usr/local/bin/dumb-init && \
+    chmod +x /usr/local/bin/dumb-init
+RUN set -x && \
     dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')" && \
     curl -L -o /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch" && \
     curl -L -o /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc" && \
@@ -50,6 +51,17 @@ RUN mkdir -p /nomad/data && \
 
 EXPOSE 4646 4647 4648 4648/udp
 
-ADD start.sh /usr/local/bin/start.sh
+# Install entrykit
+RUN set -x && \
+    apk --update add --no-cache --virtual .entrykit-deps curl ca-certificates tar && \
+    curl -L https://github.com/progrium/entrykit/releases/download/v0.4.0/entrykit_0.4.0_Linux_x86_64.tgz | tar zx && \
+    chmod +x entrykit && \
+    mv entrykit /bin/entrykit && \
+    apk del .entrykit-deps && \
+    entrykit --symlink
 
-ENTRYPOINT ["/usr/local/bin/start.sh"]
+ADD start.sh /usr/local/bin/nomad-start.sh
+
+ENTRYPOINT ["codep", \
+    "/usr/local/bin/dockerd-entrypoint.sh", \
+    "/usr/local/bin/nomad-start.sh agent -dev" ]
